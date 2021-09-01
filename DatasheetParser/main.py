@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import pdfreader
+from pdfreader import PDFReader
+from dsparser import DatasheetParser
 
 
 class Args:
@@ -10,8 +11,9 @@ class Args:
 
 def main(args: Args):
     print("Parsing", args.file)
-    reader = pdfreader.PDFReader(args.file)
-    print(reader.read())
+    reader = PDFReader(args.file)
+    parser = DatasheetParser()
+    parser.get_entities(reader.read())
 
 
 if __name__ == "__main__":
