@@ -44,6 +44,6 @@ class PDFDownloader:
     def download(self, path="/tmp/"):
         if isinstance(self._url, list):
             for l in self._url:
-                self._download(l)
+                self._download(l, path)
         else:
-            self._download(self._url)
+            self._download(self._url, path)
