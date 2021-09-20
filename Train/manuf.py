@@ -42,7 +42,7 @@ class ManufHTMLParser(HTMLParser):
             if attrs[0][0] == 'class':
                 cl_attr = "".join(attrs[0][1])
                 if 'mfr-category-list-items' in cl_attr:
-                    print("Found class: {0}".format(cl_attr))
+                    # print("Found class: {0}".format(cl_attr))
                     self.machine.search_li()
         elif self.machine.state == 'li_starttag' and tag == 'li':
             self.machine.search_a()
@@ -66,7 +66,7 @@ def read_html(path):
     with open(path, "r") as f:
         html = f.read()
         parser.feed(html)
-    print(parser.manufacturers)
+    # print(parser.manufacturers)
     return parser.manufacturers
 
 
