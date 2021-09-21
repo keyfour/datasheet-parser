@@ -5,22 +5,32 @@ import os.path
 import re
 import manuf
 import spacy
-from spacy.matcher import PhraseMatcher
+from spacy.matcher import PhraseMatcher, Matcher
 import time
 startTime = time.time()
 
 path = 'data/downloads/'
 
+
 def tracktime(msg):
     executionTime = (time.time() - startTime)
     print('Execution time in seconds: ' + str(executionTime), msg)
 
-def get_urls():
+
+def read_list_file(path):
     lines = []
-    with open("data/kicad_datasheets_list.txt", "r") as f:
+    with open(path, "r") as f:
         for line in f:
             lines.append(line.strip())
     return lines
+
+
+def get_urls():
+    return read_list_file("data/kicad_datasheets_list.txt")
+
+
+def get_components():
+    return read_list_file("data/components.txt")
 
 
 spec = importlib.util.spec_from_file_location(
@@ -36,8 +46,8 @@ urls = get_urls()
 
 tracktime("Got urls")
 
-# print(url)
-url = urls[1]
+print(len(urls))
+url = urls[78]
 filename = path + url.split('/')[-1]
 if not os.path.isfile(filename):
     p = pdfdownloader.PDFDownloader(url)
@@ -50,17 +60,24 @@ text = re.sub(r'[^\x00-\x7F]+', ' ', text)
 tracktime("Got text")
 
 nlp = spacy.load("en_core_web_sm")
-matcher = PhraseMatcher(nlp.vocab)
+matchers = {'word': PhraseMatcher(nlp.vocab), 'shape': PhraseMatcher(
+    nlp.vocab, attr='SHAPE'), 'token': Matcher(nlp.vocab)}
 
 tracktime("SpaCy initialized")
 
 manufacturers = list(
     set(manuf.read_html('data/https _ru.mouser.com_manufacturer-category_.html')))
+components = get_components()
 
 tracktime("Got vendors")
 
 patterns = [nlp.make_doc(text) for text in manufacturers]
-matcher.add("VENDOR", patterns)
+matchers['word'].add("VENDOR", patterns)
+# matchers['shape'].add("PART", [nlp("M123"), nlp("MM123"), nlp("K20P32M5")])
+patterns = [[{"POS": "ADJ"}, {"IS_ALPHA": True, "OP": "?"}, {"LOWER": text}]
+            for text in components]
+# print(patterns)
+matchers['token'].add("COMPTYPE", patterns)
 
 tracktime("Matcher initialized")
 
@@ -70,14 +87,17 @@ sentences = doc.sents
 vendors = []
 for sentence in sentences:
     sent = nlp(sentence.text)
-    matches = matcher(sent)
-    for match_id, start, end in matches:
-        span = sent[start:end]
-        vndr = (sent.text, [(span.start_char, span.end_char, nlp.vocab.strings[match_id])])
-        vendors.append(vndr)
-        tracktime("Found vendor")
+    for matcher in matchers:
+        matches = matchers[matcher](sent)
+        for match_id, start, end in matches:
+            span = sent[start:end]
+            vndr = (
+                sent.text, [(span.start_char, span.end_char, nlp.vocab.strings[match_id])])
+            vendors.append(vndr)
+            tracktime(
+                "Found {0} - {1}".format(nlp.vocab.strings[match_id], span))
 
-print(vendors)
+# print(vendors)
 
     # for manufacturer in manufacturers:
         # if manufacturer in sentence:
